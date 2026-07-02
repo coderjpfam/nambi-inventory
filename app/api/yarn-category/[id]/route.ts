@@ -46,6 +46,7 @@ export async function GET(
           description: category.description,
           noOfCones: category.noOfCones,
           weightPerBox: category.weightPerBox,
+          isRegular: category.isRegular ?? false,
           createdBy: category.createdBy,
           createdAt: category.createdAt,
           updatedAt: category.updatedAt,
@@ -95,7 +96,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { name, description, noOfCones, weightPerBox } = body;
+    const { name, description, noOfCones, weightPerBox, isRegular } = body;
 
     await connectDB();
     const category = await YarnCategory.findById(id);
@@ -115,13 +116,16 @@ export async function PUT(
       category.description = description?.trim() || undefined;
     }
     if (noOfCones !== undefined) {
-      if (typeof noOfCones !== "number" || noOfCones < 0) {
+      if (noOfCones === null || noOfCones === "") {
+        category.noOfCones = undefined;
+      } else if (typeof noOfCones !== "number" || noOfCones < 0) {
         return NextResponse.json(
           { message: "noOfCones must be a non-negative number" },
           { status: 400 }
         );
+      } else {
+        category.noOfCones = noOfCones;
       }
-      category.noOfCones = noOfCones;
     }
     if (weightPerBox !== undefined) {
       if (typeof weightPerBox !== "number" || weightPerBox < 0) {
@@ -147,6 +151,15 @@ export async function PUT(
         category.weightPerBox = weightPerBox;
       }
     }
+    if (isRegular !== undefined) {
+      if (typeof isRegular !== "boolean") {
+        return NextResponse.json(
+          { message: "isRegular must be a boolean" },
+          { status: 400 }
+        );
+      }
+      category.isRegular = isRegular;
+    }
 
     await category.save();
 
@@ -158,6 +171,7 @@ export async function PUT(
           description: category.description,
           noOfCones: category.noOfCones,
           weightPerBox: category.weightPerBox,
+          isRegular: category.isRegular,
           createdBy: category.createdBy,
           createdAt: category.createdAt,
           updatedAt: category.updatedAt,

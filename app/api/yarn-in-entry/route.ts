@@ -119,13 +119,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!purchaseDate) {
-      return NextResponse.json(
-        { message: "Purchase date is required" },
-        { status: 400 }
-      );
-    }
-
     if (!partyId || !mongoose.Types.ObjectId.isValid(partyId)) {
       return NextResponse.json(
         { message: "Valid party ID is required" },
@@ -167,7 +160,7 @@ export async function POST(request: NextRequest) {
       entryDate: new Date(entryDate),
       categoryId: new mongoose.Types.ObjectId(categoryId),
       lotNo: lotNo.trim(),
-      purchaseDate: new Date(purchaseDate),
+      purchaseDate: new Date(purchaseDate || entryDate),
       partyId: new mongoose.Types.ObjectId(partyId),
       noOfBoxes: Number(noOfBoxes),
       weightInKg: Number(weightInKg),

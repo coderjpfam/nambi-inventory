@@ -34,7 +34,7 @@ export default function PartyCard({
               Mobile No
             </p>
             <p className="text-sm font-medium text-slate-900 dark:text-white truncate overflow-hidden text-ellipsis whitespace-nowrap">
-              {party.mobileNo}
+              {party.mobileNo || "—"}
             </p>
           </div>
         </div>
@@ -49,7 +49,7 @@ export default function PartyCard({
               Email ID
             </p>
             <p className="text-sm font-medium text-slate-900 dark:text-white truncate overflow-hidden text-ellipsis whitespace-nowrap">
-              {party.emailId}
+              {party.emailId || "—"}
             </p>
           </div>
         </div>

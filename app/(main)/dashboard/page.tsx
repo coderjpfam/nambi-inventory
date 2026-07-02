@@ -138,10 +138,6 @@ export default function DashboardPage() {
       });
 
       setCategories(categoryMap);
-      
-      // Expand all categories by default
-      const allCategoryIds = Array.from(categoryMap.keys());
-      setExpandedCategories(new Set(allCategoryIds));
     } catch (error: any) {
       toast.error(
         error.response?.data?.message || "Failed to fetch dashboard data"
@@ -239,10 +235,18 @@ export default function DashboardPage() {
                   onClick={() => toggleCategory(category.categoryId)}
                   className="w-full px-6 py-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-[#101922] transition-colors"
                 >
-                  <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
-                    {category.categoryName}
-                  </h2>
-                  <span className="material-symbols-outlined text-slate-500 dark:text-[#92adc9] transition-transform">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 text-left">
+                    <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
+                      {category.categoryName}
+                    </h2>
+                    <p className="text-sm font-medium text-slate-600 dark:text-[#92adc9]">
+                      Available Weight in Kgs:{" "}
+                      <span className="text-slate-900 dark:text-white font-semibold">
+                        {category.availableWeight.toFixed(2)} kg
+                      </span>
+                    </p>
+                  </div>
+                  <span className="material-symbols-outlined text-slate-500 dark:text-[#92adc9] transition-transform shrink-0 ml-4">
                     {isExpanded ? "expand_less" : "expand_more"}
                   </span>
                 </button>
@@ -250,22 +254,6 @@ export default function DashboardPage() {
                 {/* Accordion Content */}
                 {isExpanded && (
                   <div className="border-t border-slate-200 dark:border-[#324d67]">
-                    {/* Summary Row */}
-                    <div className="px-6 py-4 flex items-center justify-between bg-slate-50 dark:bg-[#101922]">
-                      <div className="text-sm font-medium text-slate-700 dark:text-[#92adc9]">
-                        Available Weight in Kgs:{" "}
-                        <span className="text-slate-900 dark:text-white font-semibold">
-                          {category.availableWeight.toFixed(2)} kg
-                        </span>
-                      </div>
-                      <div className="text-sm font-medium text-slate-700 dark:text-[#92adc9]">
-                        Total Weight in Kgs:{" "}
-                        <span className="text-slate-900 dark:text-white font-semibold">
-                          {category.totalWeight.toFixed(2)} kg
-                        </span>
-                      </div>
-                    </div>
-
                     {/* Lot Numbers List */}
                     <div className="p-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

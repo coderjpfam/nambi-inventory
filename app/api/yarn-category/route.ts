@@ -42,6 +42,7 @@ export async function GET(request: NextRequest) {
           description: cat.description,
           noOfCones: cat.noOfCones,
           weightPerBox: cat.weightPerBox,
+          isRegular: cat.isRegular ?? false,
           createdBy: cat.createdBy,
           createdByName: userMap.get(cat.createdBy) || cat.createdBy,
           createdAt: cat.createdAt,
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, description, noOfCones, weightPerBox } = body;
+    const { name, description, noOfCones, weightPerBox, isRegular } = body;
 
     if (!name) {
       return NextResponse.json(
@@ -83,7 +84,10 @@ export async function POST(request: NextRequest) {
     // Default noOfCones to 6 if not provided
     const conesCount = noOfCones !== undefined ? noOfCones : 6;
 
-    if (typeof conesCount !== "number" || conesCount < 0) {
+    if (
+      noOfCones !== undefined &&
+      (typeof conesCount !== "number" || conesCount < 0)
+    ) {
       return NextResponse.json(
         { message: "noOfCones must be a non-negative number" },
         { status: 400 }
@@ -121,6 +125,7 @@ export async function POST(request: NextRequest) {
       description: description?.trim() || undefined,
       noOfCones: conesCount,
       weightPerBox: formattedWeightPerBox !== undefined ? formattedWeightPerBox : 36,
+      isRegular: typeof isRegular === "boolean" ? isRegular : false,
       createdBy: user.email,
     });
 
@@ -134,6 +139,7 @@ export async function POST(request: NextRequest) {
           description: category.description,
           noOfCones: category.noOfCones,
           weightPerBox: category.weightPerBox,
+          isRegular: category.isRegular,
           createdBy: category.createdBy,
           createdAt: category.createdAt,
           updatedAt: category.updatedAt,

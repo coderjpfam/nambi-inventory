@@ -5,10 +5,16 @@ import axiosInstance from "@/lib/axios";
 import { useToast } from "@/hooks/useToast";
 import CustomSelect from "@/components/common/CustomSelect";
 import CustomDatePicker from "@/components/common/CustomDatePicker";
+import {
+  syncBoxesFromWeight,
+  syncWeightFromBoxes,
+} from "@/lib/yarn-regular-calc";
 
 interface YarnCategory {
   id: string;
   name: string;
+  weightPerBox: number;
+  isRegular: boolean;
 }
 
 interface AvailableLot {
@@ -30,11 +36,13 @@ export default function YarnOutPage() {
     lotNo: "",
     availableNoOfBoxes: "",
     availableWeightInKg: "",
+    takingNoOfBoxes: "",
     takingWeightInKg: "",
   });
   const [formErrors, setFormErrors] = useState({
     categoryId: "",
     lotNo: "",
+    takingNoOfBoxes: "",
     takingWeightInKg: "",
   });
 
@@ -66,6 +74,8 @@ export default function YarnOutPage() {
           lotNo: "",
           availableNoOfBoxes: "",
           availableWeightInKg: "",
+          takingNoOfBoxes: "",
+          takingWeightInKg: "",
         }));
         return;
       }
@@ -104,6 +114,13 @@ export default function YarnOutPage() {
     fetchAvailableLots();
   }, [formData.categoryId]);
 
+  const getSelectedCategory = () =>
+    categories.find((cat) => cat.id === formData.categoryId);
+
+  const isRegularCategory =
+    getSelectedCategory()?.isRegular &&
+    (getSelectedCategory()?.weightPerBox ?? 0) > 0;
+
   // Update available quantities when lotNo changes
   useEffect(() => {
     if (formData.lotNo) {
@@ -133,6 +150,9 @@ export default function YarnOutPage() {
       | { target: { name: string; value: string } }
   ) => {
     const { name, value } = e.target;
+    const selectedCategory = getSelectedCategory();
+    const isRegular =
+      selectedCategory?.isRegular && (selectedCategory?.weightPerBox ?? 0) > 0;
 
     if (name === "takingWeightInKg") {
       // Allow only numbers and decimal point, max 3 decimal places
@@ -142,7 +162,29 @@ export default function YarnOutPage() {
       if (parts[1] && parts[1].length > 3) return; // Max 3 decimal places
       setFormData((prev) => ({
         ...prev,
-        [name]: numericValue,
+        takingWeightInKg: numericValue,
+        ...(isRegular
+          ? {
+              takingNoOfBoxes: syncBoxesFromWeight(
+                numericValue,
+                selectedCategory!.weightPerBox
+              ),
+            }
+          : {}),
+      }));
+    } else if (name === "takingNoOfBoxes") {
+      const numericValue = value.replace(/[^0-9]/g, "");
+      setFormData((prev) => ({
+        ...prev,
+        takingNoOfBoxes: numericValue,
+        ...(isRegular
+          ? {
+              takingWeightInKg: syncWeightFromBoxes(
+                numericValue,
+                selectedCategory!.weightPerBox
+              ),
+            }
+          : {}),
       }));
     } else {
       setFormData((prev) => ({
@@ -227,11 +269,13 @@ export default function YarnOutPage() {
         lotNo: "",
         availableNoOfBoxes: "",
         availableWeightInKg: "",
+        takingNoOfBoxes: "",
         takingWeightInKg: "",
       });
       setFormErrors({
         categoryId: "",
         lotNo: "",
+        takingNoOfBoxes: "",
         takingWeightInKg: "",
       });
       setAvailableLots([]);
@@ -302,9 +346,11 @@ export default function YarnOutPage() {
                     setFormData((prev) => ({
                       ...prev,
                       [name]: value,
-                      lotNo: "", // Reset lotNo when category changes
+                      lotNo: "",
                       availableNoOfBoxes: "",
                       availableWeightInKg: "",
+                      takingNoOfBoxes: "",
+                      takingWeightInKg: "",
                     }));
                     if (formErrors[name as keyof typeof formErrors]) {
                       setFormErrors((prev) => ({
@@ -388,6 +434,30 @@ export default function YarnOutPage() {
                   placeholder="0.000"
                 />
               </div>
+
+              {/* Taking Number of Boxes - regular categories only */}
+              {isRegularCategory && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-white mb-2">
+                    Taking No. of Boxes
+                  </label>
+                  <input
+                    type="text"
+                    name="takingNoOfBoxes"
+                    value={formData.takingNoOfBoxes}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-[#324d67] bg-slate-50 dark:bg-[#101922] text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="0"
+                  />
+                  <div className="min-h-[20px]">
+                    {formErrors.takingNoOfBoxes && (
+                      <p className="text-sm text-red-500 dark:text-red-400 mt-1">
+                        {formErrors.takingNoOfBoxes}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Taking Weight in Kg */}
               <div>

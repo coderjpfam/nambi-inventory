@@ -44,8 +44,9 @@ export default function YarnCategoryPage() {
   const handleSubmit = async (data: {
     name: string;
     description?: string;
-    noOfCones: number;
+    noOfCones?: number;
     weightPerBox: number;
+    isRegular: boolean;
   }) => {
     try {
       setSubmitting(true);

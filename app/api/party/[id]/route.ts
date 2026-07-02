@@ -117,30 +117,23 @@ export async function PUT(
       party.name = name.trim();
     }
     if (mobileNo !== undefined) {
-      if (!mobileNo || !mobileNo.trim()) {
-        return NextResponse.json(
-          { message: "Mobile number is required" },
-          { status: 400 }
-        );
-      }
-      party.mobileNo = mobileNo.trim();
+      const trimmedMobile = mobileNo?.trim();
+      party.mobileNo = trimmedMobile || undefined;
     }
     if (emailId !== undefined) {
-      if (!emailId || !emailId.trim()) {
-        return NextResponse.json(
-          { message: "Email ID is required" },
-          { status: 400 }
-        );
+      const trimmedEmail = emailId?.trim();
+      if (trimmedEmail) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(trimmedEmail)) {
+          return NextResponse.json(
+            { message: "Invalid email format" },
+            { status: 400 }
+          );
+        }
+        party.emailId = trimmedEmail.toLowerCase();
+      } else {
+        party.emailId = undefined;
       }
-      // Basic email validation
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(emailId.trim())) {
-        return NextResponse.json(
-          { message: "Invalid email format" },
-          { status: 400 }
-        );
-      }
-      party.emailId = emailId.trim().toLowerCase();
     }
 
     await party.save();

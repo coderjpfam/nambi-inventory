@@ -6,8 +6,9 @@ export interface YarnCategory {
   id: string;
   name: string;
   description?: string;
-  noOfCones: number;
+  noOfCones?: number;
   weightPerBox?: number;
+  isRegular: boolean;
   createdBy: string;
   createdByName?: string;
   createdAt: string;
@@ -17,8 +18,9 @@ export interface YarnCategory {
 interface FormData {
   name: string;
   description: string;
-  noOfCones: number;
+  noOfCones: string;
   weightPerBox: string;
+  isRegular: boolean;
 }
 
 interface FormErrors {
@@ -33,8 +35,9 @@ interface YarnCategoryFormProps {
   onSubmit: (data: {
     name: string;
     description?: string;
-    noOfCones: number;
+    noOfCones?: number;
     weightPerBox: number;
+    isRegular: boolean;
   }) => Promise<void>;
   onCancel: () => void;
   submitting: boolean;
@@ -50,8 +53,9 @@ export default function YarnCategoryForm({
   const [formData, setFormData] = useState<FormData>({
     name: "",
     description: "",
-    noOfCones: 6,
+    noOfCones: "",
     weightPerBox: "36.00",
+    isRegular: false,
   });
   const [formErrors, setFormErrors] = useState<FormErrors>({
     name: "",
@@ -65,18 +69,23 @@ export default function YarnCategoryForm({
       setFormData({
         name: editingCategory.name,
         description: editingCategory.description || "",
-        noOfCones: editingCategory.noOfCones,
+        noOfCones:
+          editingCategory.noOfCones !== undefined
+            ? String(editingCategory.noOfCones)
+            : "",
         weightPerBox:
           editingCategory.weightPerBox !== undefined
             ? editingCategory.weightPerBox.toFixed(3)
             : "36.00",
+        isRegular: editingCategory.isRegular ?? false,
       });
     } else {
       setFormData({
         name: "",
         description: "",
-        noOfCones: 6,
+        noOfCones: "",
         weightPerBox: "36.00",
+        isRegular: false,
       });
     }
     setFormErrors({ name: "", noOfCones: "", weightPerBox: "" });
@@ -86,12 +95,22 @@ export default function YarnCategoryForm({
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
-    const { name, value } = e.target;
+    const { name, value, type } = e.target;
 
-    if (name === "noOfCones") {
+    if (type === "checkbox") {
+      const checked = (e.target as HTMLInputElement).checked;
       setFormData((prev) => ({
         ...prev,
-        [name]: Number(value) || 0,
+        [name]: checked,
+      }));
+      return;
+    }
+
+    if (name === "noOfCones") {
+      const numericValue = value.replace(/[^0-9]/g, "");
+      setFormData((prev) => ({
+        ...prev,
+        [name]: numericValue,
       }));
     } else if (name === "weightPerBox") {
       // Allow only numbers and decimal point
@@ -128,8 +147,11 @@ export default function YarnCategoryForm({
       errors.name = "Name is required";
     }
 
-    if (formData.noOfCones < 0) {
-      errors.noOfCones = "Number of cones must be non-negative";
+    if (formData.noOfCones.trim() !== "") {
+      const conesValue = Number(formData.noOfCones);
+      if (isNaN(conesValue) || conesValue < 0) {
+        errors.noOfCones = "Number of cones must be a non-negative number";
+      }
     }
 
     // Validate weightPerBox if provided (if empty, will default to 36)
@@ -189,8 +211,11 @@ export default function YarnCategoryForm({
     await onSubmit({
       name: formData.name.trim(),
       description: formData.description.trim() || undefined,
-      noOfCones: formData.noOfCones,
+      ...(formData.noOfCones.trim() !== "" && {
+        noOfCones: Number(formData.noOfCones),
+      }),
       weightPerBox: weightPerBoxValue,
+      isRegular: formData.isRegular,
     });
   };
 
@@ -245,16 +270,15 @@ export default function YarnCategoryForm({
             {/* Number of Cones */}
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-white mb-2">
-                Number of Cones <span className="text-red-500">*</span>
+                Number of Cones (Optional)
               </label>
               <input
-                type="number"
+                type="text"
                 name="noOfCones"
                 value={formData.noOfCones}
                 onChange={handleInputChange}
-                min="0"
                 className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-[#324d67] bg-slate-50 dark:bg-[#101922] text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="0"
+                placeholder="e.g., 6"
               />
               <div className="min-h-[20px]">
                 {formErrors.noOfCones && (
@@ -290,6 +314,22 @@ export default function YarnCategoryForm({
                   </p>
                 )}
               </div>
+            </div>
+
+            {/* Is Regular */}
+            <div>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="isRegular"
+                  checked={formData.isRegular}
+                  onChange={handleInputChange}
+                  className="w-4 h-4 rounded border-slate-300 dark:border-[#324d67] text-primary focus:ring-primary"
+                />
+                <span className="text-sm font-medium text-slate-700 dark:text-white">
+                  Is Regular
+                </span>
+              </label>
             </div>
 
             {/* Form Actions */}

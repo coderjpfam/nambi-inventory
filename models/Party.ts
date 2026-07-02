@@ -2,8 +2,8 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface IParty extends Document {
   name: string;
-  mobileNo: string;
-  emailId: string;
+  mobileNo?: string;
+  emailId?: string;
   createdBy: string; // User email or ID
   createdAt: Date;
   updatedAt: Date;
@@ -18,12 +18,10 @@ const PartySchema: Schema = new Schema(
     },
     mobileNo: {
       type: String,
-      required: true,
       trim: true,
     },
     emailId: {
       type: String,
-      required: true,
       trim: true,
       lowercase: true,
     },

@@ -38,8 +38,8 @@ export default function PartyPage() {
   // Handle form submit
   const handleSubmit = async (data: {
     name: string;
-    mobileNo: string;
-    emailId: string;
+    mobileNo?: string;
+    emailId?: string;
   }) => {
     try {
       setSubmitting(true);

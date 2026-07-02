@@ -79,34 +79,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!mobileNo || !mobileNo.trim()) {
-      return NextResponse.json(
-        { message: "Mobile number is required" },
-        { status: 400 }
-      );
-    }
+    const trimmedMobile = mobileNo?.trim();
+    const trimmedEmail = emailId?.trim();
 
-    if (!emailId || !emailId.trim()) {
-      return NextResponse.json(
-        { message: "Email ID is required" },
-        { status: 400 }
-      );
-    }
-
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(emailId.trim())) {
-      return NextResponse.json(
-        { message: "Invalid email format" },
-        { status: 400 }
-      );
+    if (trimmedEmail) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(trimmedEmail)) {
+        return NextResponse.json(
+          { message: "Invalid email format" },
+          { status: 400 }
+        );
+      }
     }
 
     await connectDB();
     const party = new Party({
       name: name.trim(),
-      mobileNo: mobileNo.trim(),
-      emailId: emailId.trim().toLowerCase(),
+      ...(trimmedMobile && { mobileNo: trimmedMobile }),
+      ...(trimmedEmail && { emailId: trimmedEmail.toLowerCase() }),
       createdBy: user.email,
     });
 

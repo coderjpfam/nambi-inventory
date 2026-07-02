@@ -39,7 +39,7 @@ export default function YarnCategoryCard({
               Number of Cones
             </p>
             <p className="text-sm font-medium text-slate-900 dark:text-white truncate overflow-hidden text-ellipsis whitespace-nowrap">
-              {category.noOfCones}
+              {category.noOfCones ?? "—"}
             </p>
           </div>
         </div>
@@ -60,6 +60,21 @@ export default function YarnCategoryCard({
             </div>
           </div>
         )}
+
+        {/* Is Regular */}
+        <div className="flex items-center gap-2">
+          <span className="material-symbols-outlined text-slate-400 dark:text-[#64748b] text-lg flex-shrink-0">
+            check_circle
+          </span>
+          <div className="flex-1 min-w-0 overflow-hidden">
+            <p className="text-xs text-slate-500 dark:text-[#92adc9]">
+              Is Regular
+            </p>
+            <p className="text-sm font-medium text-slate-900 dark:text-white truncate overflow-hidden text-ellipsis whitespace-nowrap">
+              {category.isRegular ? "Yes" : "No"}
+            </p>
+          </div>
+        </div>
 
         {/* Created By */}
         <div className="flex items-center gap-2">

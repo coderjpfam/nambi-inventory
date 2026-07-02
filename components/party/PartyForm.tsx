@@ -5,8 +5,8 @@ import { useState, useEffect } from "react";
 export interface Party {
   id: string;
   name: string;
-  mobileNo: string;
-  emailId: string;
+  mobileNo?: string;
+  emailId?: string;
   createdBy: string;
   createdByName?: string;
   createdAt: string;
@@ -30,8 +30,8 @@ interface PartyFormProps {
   editingParty: Party | null;
   onSubmit: (data: {
     name: string;
-    mobileNo: string;
-    emailId: string;
+    mobileNo?: string;
+    emailId?: string;
   }) => Promise<void>;
   onCancel: () => void;
   submitting: boolean;
@@ -60,8 +60,8 @@ export default function PartyForm({
     if (editingParty) {
       setFormData({
         name: editingParty.name,
-        mobileNo: editingParty.mobileNo,
-        emailId: editingParty.emailId,
+        mobileNo: editingParty.mobileNo || "",
+        emailId: editingParty.emailId || "",
       });
     } else {
       setFormData({
@@ -102,14 +102,7 @@ export default function PartyForm({
       errors.name = "Name is required";
     }
 
-    if (!formData.mobileNo.trim()) {
-      errors.mobileNo = "Mobile number is required";
-    }
-
-    if (!formData.emailId.trim()) {
-      errors.emailId = "Email ID is required";
-    } else {
-      // Basic email validation
+    if (formData.emailId.trim()) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(formData.emailId.trim())) {
         errors.emailId = "Invalid email format";
@@ -130,8 +123,8 @@ export default function PartyForm({
 
     await onSubmit({
       name: formData.name.trim(),
-      mobileNo: formData.mobileNo.trim(),
-      emailId: formData.emailId.trim(),
+      ...(formData.mobileNo.trim() && { mobileNo: formData.mobileNo.trim() }),
+      ...(formData.emailId.trim() && { emailId: formData.emailId.trim() }),
     });
   };
 
@@ -171,7 +164,7 @@ export default function PartyForm({
             {/* Mobile No */}
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-white mb-2">
-                Mobile No <span className="text-red-500">*</span>
+                Mobile No (Optional)
               </label>
               <input
                 type="tel"
@@ -193,7 +186,7 @@ export default function PartyForm({
             {/* Email ID */}
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-white mb-2">
-                Email ID <span className="text-red-500">*</span>
+                Email ID (Optional)
               </label>
               <input
                 type="email"

@@ -3,8 +3,9 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 export interface IYarnCategory extends Document {
   name: string;
   description?: string;
-  noOfCones: number;
+  noOfCones?: number;
   weightPerBox?: number;
+  isRegular: boolean;
   createdBy: string; // User email or ID
   createdAt: Date;
   updatedAt: Date;
@@ -23,14 +24,17 @@ const YarnCategorySchema: Schema = new Schema(
     },
     noOfCones: {
       type: Number,
-      required: true,
-      default: 6,
       min: 0,
+      default: 6,
     },
     weightPerBox: {
       type: Number,
       min: 0,
       default: 36,
+    },
+    isRegular: {
+      type: Boolean,
+      default: false,
     },
     createdBy: {
       type: String,

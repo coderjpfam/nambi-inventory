@@ -5,11 +5,16 @@ import axiosInstance from "@/lib/axios";
 import { useToast } from "@/hooks/useToast";
 import CustomSelect from "@/components/common/CustomSelect";
 import CustomDatePicker from "@/components/common/CustomDatePicker";
+import {
+  syncBoxesFromWeight,
+  syncWeightFromBoxes,
+} from "@/lib/yarn-regular-calc";
 
 interface YarnCategory {
   id: string;
   name: string;
   weightPerBox: number;
+  isRegular: boolean;
 }
 
 interface Party {
@@ -23,7 +28,6 @@ interface YarnInEntry {
   categoryId: string;
   categoryName: string;
   lotNo: string;
-  purchaseDate: string;
   partyId: string;
   partyName: string;
   noOfBoxes: number;
@@ -40,12 +44,10 @@ export default function YarnInPage() {
   const [parties, setParties] = useState<Party[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [weightManuallyChanged, setWeightManuallyChanged] = useState(false);
   const [formData, setFormData] = useState({
     entryDate: new Date().toISOString().split("T")[0],
     categoryId: "",
     lotNo: "",
-    purchaseDate: new Date().toISOString().split("T")[0],
     partyId: "",
     noOfBoxes: "",
     weightInKg: "",
@@ -80,76 +82,51 @@ export default function YarnInPage() {
     fetchData();
   }, []);
 
-  // Auto-calculate weight when boxes change (if weight wasn't manually changed)
-  useEffect(() => {
-    if (
-      !weightManuallyChanged &&
-      formData.categoryId &&
-      formData.noOfBoxes &&
-      Number(formData.noOfBoxes) > 0
-    ) {
-      const selectedCategory = categories.find(
-        (cat) => cat.id === formData.categoryId
-      );
-      if (selectedCategory && selectedCategory.weightPerBox) {
-        const calculatedWeight =
-          selectedCategory.weightPerBox * Number(formData.noOfBoxes);
-        setFormData((prev) => ({
-          ...prev,
-          weightInKg: calculatedWeight.toFixed(3),
-        }));
-      }
-    }
-  }, [formData.noOfBoxes, formData.categoryId, categories, weightManuallyChanged]);
-
-  // Reset weight manual change flag when category changes
-  useEffect(() => {
-    setWeightManuallyChanged(false);
-    // Auto-calculate if boxes are already entered
-    if (
-      formData.categoryId &&
-      formData.noOfBoxes &&
-      Number(formData.noOfBoxes) > 0 &&
-      categories.length > 0
-    ) {
-      const selectedCategory = categories.find(
-        (cat) => cat.id === formData.categoryId
-      );
-      if (selectedCategory && selectedCategory.weightPerBox) {
-        const calculatedWeight =
-          selectedCategory.weightPerBox * Number(formData.noOfBoxes);
-        setFormData((prev) => ({
-          ...prev,
-          weightInKg: calculatedWeight.toFixed(3),
-        }));
-      }
-    }
-  }, [formData.categoryId, formData.noOfBoxes, categories]);
+  const getSelectedCategory = () =>
+    categories.find((cat) => cat.id === formData.categoryId);
 
   // Handle form input change
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement> | { target: { name: string; value: string } }
   ) => {
     const { name, value } = e.target;
+    const selectedCategory = getSelectedCategory();
+    const isRegular =
+      selectedCategory?.isRegular && selectedCategory.weightPerBox > 0;
 
     if (name === "weightInKg") {
-      // Mark weight as manually changed
-      setWeightManuallyChanged(true);
       // Allow only numbers and decimal point, max 3 decimal places
       const numericValue = value.replace(/[^0-9.]/g, "");
       const parts = numericValue.split(".");
       if (parts.length > 2) return; // Only one decimal point
       if (parts[1] && parts[1].length > 3) return; // Max 3 decimal places
+
       setFormData((prev) => ({
         ...prev,
-        [name]: numericValue,
+        weightInKg: numericValue,
+        ...(isRegular
+          ? {
+              noOfBoxes: syncBoxesFromWeight(
+                numericValue,
+                selectedCategory!.weightPerBox
+              ),
+            }
+          : {}),
       }));
     } else if (name === "noOfBoxes") {
       // Allow only numbers
       const numericValue = value.replace(/[^0-9]/g, "");
       setFormData((prev) => ({
         ...prev,
-        [name]: numericValue,
+        noOfBoxes: numericValue,
+        ...(isRegular
+          ? {
+              weightInKg: syncWeightFromBoxes(
+                numericValue,
+                selectedCategory!.weightPerBox
+              ),
+            }
+          : {}),
       }));
     } else {
       setFormData((prev) => ({
@@ -223,7 +200,6 @@ export default function YarnInPage() {
         entryDate: formData.entryDate,
         categoryId: formData.categoryId,
         lotNo: formData.lotNo.trim(),
-        purchaseDate: formData.purchaseDate,
         partyId: formData.partyId,
         noOfBoxes: Number(formData.noOfBoxes),
         weightInKg: Number(formData.weightInKg),
@@ -236,7 +212,6 @@ export default function YarnInPage() {
         entryDate: new Date().toISOString().split("T")[0],
         categoryId: "",
         lotNo: "",
-        purchaseDate: new Date().toISOString().split("T")[0],
         partyId: "",
         noOfBoxes: "",
         weightInKg: "",
@@ -248,7 +223,6 @@ export default function YarnInPage() {
         noOfBoxes: "",
         weightInKg: "",
       });
-      setWeightManuallyChanged(false);
     } catch (error: any) {
       toast.error(
         error.response?.data?.message || "Failed to create yarn in entry"
@@ -303,24 +277,6 @@ export default function YarnInPage() {
                 </p>
               </div>
 
-              {/* Purchase Date */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-white mb-2">
-                  Purchase Date <span className="text-red-500">*</span>
-                </label>
-                <CustomDatePicker
-                  name="purchaseDate"
-                  value={formData.purchaseDate}
-                  onChange={(e) => {
-                    const { name, value } = e.target;
-                    setFormData((prev) => ({
-                      ...prev,
-                      [name]: value,
-                    }));
-                  }}
-                />
-              </div>
-
               {/* Category */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-white mb-2">
@@ -331,10 +287,27 @@ export default function YarnInPage() {
                   value={formData.categoryId}
                   onChange={(e) => {
                     const { name, value } = e.target;
-                    setFormData((prev) => ({
-                      ...prev,
-                      [name]: value,
-                    }));
+                    const newCategory = categories.find((cat) => cat.id === value);
+                    setFormData((prev) => {
+                      const next = { ...prev, [name]: value };
+                      if (
+                        newCategory?.isRegular &&
+                        newCategory.weightPerBox > 0
+                      ) {
+                        if (prev.noOfBoxes !== "") {
+                          next.weightInKg = syncWeightFromBoxes(
+                            prev.noOfBoxes,
+                            newCategory.weightPerBox
+                          );
+                        } else if (prev.weightInKg !== "") {
+                          next.noOfBoxes = syncBoxesFromWeight(
+                            prev.weightInKg,
+                            newCategory.weightPerBox
+                          );
+                        }
+                      }
+                      return next;
+                    });
                     if (formErrors[name as keyof typeof formErrors]) {
                       setFormErrors((prev) => ({
                         ...prev,
