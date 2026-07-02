@@ -207,6 +207,7 @@ export default function YarnOutPage() {
     const errors = {
       categoryId: "",
       lotNo: "",
+      takingNoOfBoxes: "",
       takingWeightInKg: "",
     };
 
@@ -239,7 +240,12 @@ export default function YarnOutPage() {
     }
 
     setFormErrors(errors);
-    return !errors.categoryId && !errors.lotNo && !errors.takingWeightInKg;
+    return (
+      !errors.categoryId &&
+      !errors.lotNo &&
+      !errors.takingNoOfBoxes &&
+      !errors.takingWeightInKg
+    );
   };
 
   // Handle form submit
