@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import YarnCategory from "@/models/YarnCategory";
+import YarnInEntry from "@/models/YarnInEntry";
+import YarnExEntry from "@/models/YarnExEntry";
 import { getAuthenticatedUser } from "@/lib/api-auth";
 import mongoose from "mongoose";
 
@@ -46,7 +48,6 @@ export async function GET(
           description: category.description,
           noOfCones: category.noOfCones,
           weightPerBox: category.weightPerBox,
-          isRegular: category.isRegular ?? false,
           createdBy: category.createdBy,
           createdAt: category.createdAt,
           updatedAt: category.updatedAt,
@@ -96,7 +97,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { name, description, noOfCones, weightPerBox, isRegular } = body;
+    const { name, description, noOfCones, weightPerBox } = body;
 
     await connectDB();
     const category = await YarnCategory.findById(id);
@@ -151,15 +152,6 @@ export async function PUT(
         category.weightPerBox = weightPerBox;
       }
     }
-    if (isRegular !== undefined) {
-      if (typeof isRegular !== "boolean") {
-        return NextResponse.json(
-          { message: "isRegular must be a boolean" },
-          { status: 400 }
-        );
-      }
-      category.isRegular = isRegular;
-    }
 
     await category.save();
 
@@ -171,7 +163,6 @@ export async function PUT(
           description: category.description,
           noOfCones: category.noOfCones,
           weightPerBox: category.weightPerBox,
-          isRegular: category.isRegular,
           createdBy: category.createdBy,
           createdAt: category.createdAt,
           updatedAt: category.updatedAt,
@@ -223,7 +214,9 @@ export async function DELETE(
     }
 
     await connectDB();
-    const category = await YarnCategory.findByIdAndDelete(id);
+    const categoryObjectId = new mongoose.Types.ObjectId(id);
+
+    const category = await YarnCategory.findById(categoryObjectId);
 
     if (!category) {
       return NextResponse.json(
@@ -232,8 +225,19 @@ export async function DELETE(
       );
     }
 
+    const [inDeleteResult, exDeleteResult] = await Promise.all([
+      YarnInEntry.deleteMany({ categoryId: categoryObjectId }),
+      YarnExEntry.deleteMany({ categoryId: categoryObjectId }),
+    ]);
+
+    await YarnCategory.findByIdAndDelete(categoryObjectId);
+
     return NextResponse.json(
-      { message: "Yarn category deleted successfully" },
+      {
+        message: "Yarn category deleted successfully",
+        deletedInEntries: inDeleteResult.deletedCount,
+        deletedExEntries: exDeleteResult.deletedCount,
+      },
       { status: 200 }
     );
   } catch (error: any) {

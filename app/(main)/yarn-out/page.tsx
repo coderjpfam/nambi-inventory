@@ -14,7 +14,6 @@ interface YarnCategory {
   id: string;
   name: string;
   weightPerBox: number;
-  isRegular: boolean;
 }
 
 interface AvailableLot {
@@ -36,6 +35,7 @@ export default function YarnOutPage() {
     lotNo: "",
     availableNoOfBoxes: "",
     availableWeightInKg: "",
+    isFullBox: false,
     takingNoOfBoxes: "",
     takingWeightInKg: "",
   });
@@ -76,6 +76,7 @@ export default function YarnOutPage() {
           availableWeightInKg: "",
           takingNoOfBoxes: "",
           takingWeightInKg: "",
+          isFullBox: false,
         }));
         return;
       }
@@ -114,12 +115,11 @@ export default function YarnOutPage() {
     fetchAvailableLots();
   }, [formData.categoryId]);
 
-  const getSelectedCategory = () =>
-    categories.find((cat) => cat.id === formData.categoryId);
+  const getCategoryWeightPerBox = (categoryId: string) =>
+    categories.find((cat) => cat.id === categoryId)?.weightPerBox ?? 0;
 
-  const isRegularCategory =
-    getSelectedCategory()?.isRegular &&
-    (getSelectedCategory()?.weightPerBox ?? 0) > 0;
+  const shouldSyncFullBox = (isFullBox: boolean, categoryId: string) =>
+    isFullBox && getCategoryWeightPerBox(categoryId) > 0;
 
   // Update available quantities when lotNo changes
   useEffect(() => {
@@ -149,10 +149,30 @@ export default function YarnOutPage() {
       | React.ChangeEvent<HTMLInputElement>
       | { target: { name: string; value: string } }
   ) => {
-    const { name, value } = e.target;
-    const selectedCategory = getSelectedCategory();
-    const isRegular =
-      selectedCategory?.isRegular && (selectedCategory?.weightPerBox ?? 0) > 0;
+    const { name, value, type } = e.target as HTMLInputElement;
+
+    if (type === "checkbox" && name === "isFullBox") {
+      const checked = (e.target as HTMLInputElement).checked;
+      setFormData((prev) => {
+        const next = { ...prev, isFullBox: checked };
+        const weightPerBox = getCategoryWeightPerBox(prev.categoryId);
+        if (checked && weightPerBox > 0) {
+          if (prev.takingNoOfBoxes !== "") {
+            next.takingWeightInKg = syncWeightFromBoxes(
+              prev.takingNoOfBoxes,
+              weightPerBox
+            );
+          } else if (prev.takingWeightInKg !== "") {
+            next.takingNoOfBoxes = syncBoxesFromWeight(
+              prev.takingWeightInKg,
+              weightPerBox
+            );
+          }
+        }
+        return next;
+      });
+      return;
+    }
 
     if (name === "takingWeightInKg") {
       // Allow only numbers and decimal point, max 3 decimal places
@@ -160,32 +180,40 @@ export default function YarnOutPage() {
       const parts = numericValue.split(".");
       if (parts.length > 2) return; // Only one decimal point
       if (parts[1] && parts[1].length > 3) return; // Max 3 decimal places
-      setFormData((prev) => ({
-        ...prev,
-        takingWeightInKg: numericValue,
-        ...(isRegular
-          ? {
-              takingNoOfBoxes: syncBoxesFromWeight(
-                numericValue,
-                selectedCategory!.weightPerBox
-              ),
-            }
-          : {}),
-      }));
+      setFormData((prev) => {
+        const weightPerBox = getCategoryWeightPerBox(prev.categoryId);
+        const canSync = shouldSyncFullBox(prev.isFullBox, prev.categoryId);
+        return {
+          ...prev,
+          takingWeightInKg: numericValue,
+          ...(canSync
+            ? {
+                takingNoOfBoxes: syncBoxesFromWeight(
+                  numericValue,
+                  weightPerBox
+                ),
+              }
+            : {}),
+        };
+      });
     } else if (name === "takingNoOfBoxes") {
       const numericValue = value.replace(/[^0-9]/g, "");
-      setFormData((prev) => ({
-        ...prev,
-        takingNoOfBoxes: numericValue,
-        ...(isRegular
-          ? {
-              takingWeightInKg: syncWeightFromBoxes(
-                numericValue,
-                selectedCategory!.weightPerBox
-              ),
-            }
-          : {}),
-      }));
+      setFormData((prev) => {
+        const weightPerBox = getCategoryWeightPerBox(prev.categoryId);
+        const canSync = shouldSyncFullBox(prev.isFullBox, prev.categoryId);
+        return {
+          ...prev,
+          takingNoOfBoxes: numericValue,
+          ...(canSync
+            ? {
+                takingWeightInKg: syncWeightFromBoxes(
+                  numericValue,
+                  weightPerBox
+                ),
+              }
+            : {}),
+        };
+      });
     } else {
       setFormData((prev) => ({
         ...prev,
@@ -275,6 +303,7 @@ export default function YarnOutPage() {
         lotNo: "",
         availableNoOfBoxes: "",
         availableWeightInKg: "",
+        isFullBox: false,
         takingNoOfBoxes: "",
         takingWeightInKg: "",
       });
@@ -355,6 +384,7 @@ export default function YarnOutPage() {
                       lotNo: "",
                       availableNoOfBoxes: "",
                       availableWeightInKg: "",
+                      isFullBox: false,
                       takingNoOfBoxes: "",
                       takingWeightInKg: "",
                     }));
@@ -413,6 +443,22 @@ export default function YarnOutPage() {
                 />
               </div>
 
+              {/* Is Full Box */}
+              <div className="col-span-full flex items-end">
+                <label className="flex items-center gap-2 cursor-pointer pb-2">
+                  <input
+                    type="checkbox"
+                    name="isFullBox"
+                    checked={formData.isFullBox}
+                    onChange={handleInputChange}
+                    className="w-4 h-4 rounded border-slate-300 dark:border-[#324d67] text-primary focus:ring-primary"
+                  />
+                  <span className="text-sm font-medium text-slate-700 dark:text-white">
+                    Is Full Box
+                  </span>
+                </label>
+              </div>
+
               {/* Available Number of Boxes */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-white mb-2">
@@ -441,8 +487,8 @@ export default function YarnOutPage() {
                 />
               </div>
 
-              {/* Taking Number of Boxes - regular categories only */}
-              {isRegularCategory && (
+              {/* Taking Number of Boxes */}
+              {formData.isFullBox && (
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-white mb-2">
                     Taking No. of Boxes

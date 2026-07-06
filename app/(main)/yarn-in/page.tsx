@@ -14,7 +14,6 @@ interface YarnCategory {
   id: string;
   name: string;
   weightPerBox: number;
-  isRegular: boolean;
 }
 
 interface Party {
@@ -49,6 +48,7 @@ export default function YarnInPage() {
     categoryId: "",
     lotNo: "",
     partyId: "",
+    isFullBox: false,
     noOfBoxes: "",
     weightInKg: "",
   });
@@ -82,17 +82,34 @@ export default function YarnInPage() {
     fetchData();
   }, []);
 
-  const getSelectedCategory = () =>
-    categories.find((cat) => cat.id === formData.categoryId);
+  const getCategoryWeightPerBox = (categoryId: string) =>
+    categories.find((cat) => cat.id === categoryId)?.weightPerBox ?? 0;
+
+  const shouldSyncFullBox = (isFullBox: boolean, categoryId: string) =>
+    isFullBox && getCategoryWeightPerBox(categoryId) > 0;
 
   // Handle form input change
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement> | { target: { name: string; value: string } }
   ) => {
-    const { name, value } = e.target;
-    const selectedCategory = getSelectedCategory();
-    const isRegular =
-      selectedCategory?.isRegular && selectedCategory.weightPerBox > 0;
+    const { name, value, type } = e.target as HTMLInputElement;
+
+    if (type === "checkbox" && name === "isFullBox") {
+      const checked = (e.target as HTMLInputElement).checked;
+      setFormData((prev) => {
+        const next = { ...prev, isFullBox: checked };
+        const weightPerBox = getCategoryWeightPerBox(prev.categoryId);
+        if (checked && weightPerBox > 0) {
+          if (prev.noOfBoxes !== "") {
+            next.weightInKg = syncWeightFromBoxes(prev.noOfBoxes, weightPerBox);
+          } else if (prev.weightInKg !== "") {
+            next.noOfBoxes = syncBoxesFromWeight(prev.weightInKg, weightPerBox);
+          }
+        }
+        return next;
+      });
+      return;
+    }
 
     if (name === "weightInKg") {
       // Allow only numbers and decimal point, max 3 decimal places
@@ -101,33 +118,35 @@ export default function YarnInPage() {
       if (parts.length > 2) return; // Only one decimal point
       if (parts[1] && parts[1].length > 3) return; // Max 3 decimal places
 
-      setFormData((prev) => ({
-        ...prev,
-        weightInKg: numericValue,
-        ...(isRegular
-          ? {
-              noOfBoxes: syncBoxesFromWeight(
-                numericValue,
-                selectedCategory!.weightPerBox
-              ),
-            }
-          : {}),
-      }));
+      setFormData((prev) => {
+        const weightPerBox = getCategoryWeightPerBox(prev.categoryId);
+        const canSync = shouldSyncFullBox(prev.isFullBox, prev.categoryId);
+        return {
+          ...prev,
+          weightInKg: numericValue,
+          ...(canSync
+            ? {
+                noOfBoxes: syncBoxesFromWeight(numericValue, weightPerBox),
+              }
+            : {}),
+        };
+      });
     } else if (name === "noOfBoxes") {
       // Allow only numbers
       const numericValue = value.replace(/[^0-9]/g, "");
-      setFormData((prev) => ({
-        ...prev,
-        noOfBoxes: numericValue,
-        ...(isRegular
-          ? {
-              weightInKg: syncWeightFromBoxes(
-                numericValue,
-                selectedCategory!.weightPerBox
-              ),
-            }
-          : {}),
-      }));
+      setFormData((prev) => {
+        const weightPerBox = getCategoryWeightPerBox(prev.categoryId);
+        const canSync = shouldSyncFullBox(prev.isFullBox, prev.categoryId);
+        return {
+          ...prev,
+          noOfBoxes: numericValue,
+          ...(canSync
+            ? {
+                weightInKg: syncWeightFromBoxes(numericValue, weightPerBox),
+              }
+            : {}),
+        };
+      });
     } else {
       setFormData((prev) => ({
         ...prev,
@@ -213,6 +232,7 @@ export default function YarnInPage() {
         categoryId: "",
         lotNo: "",
         partyId: "",
+        isFullBox: false,
         noOfBoxes: "",
         weightInKg: "",
       });
@@ -269,7 +289,7 @@ export default function YarnInPage() {
                 <CustomDatePicker
                   name="entryDate"
                   value={formData.entryDate}
-                  onChange={() => {}} // No-op since it's disabled
+                  onChange={() => { }} // No-op since it's disabled
                   disabled={true}
                 />
                 <p className="text-xs text-slate-500 dark:text-[#92adc9] mt-1">
@@ -287,22 +307,21 @@ export default function YarnInPage() {
                   value={formData.categoryId}
                   onChange={(e) => {
                     const { name, value } = e.target;
-                    const newCategory = categories.find((cat) => cat.id === value);
                     setFormData((prev) => {
                       const next = { ...prev, [name]: value };
-                      if (
-                        newCategory?.isRegular &&
-                        newCategory.weightPerBox > 0
-                      ) {
+                      const weightPerBox = categories.find(
+                        (cat) => cat.id === value
+                      )?.weightPerBox ?? 0;
+                      if (prev.isFullBox && weightPerBox > 0) {
                         if (prev.noOfBoxes !== "") {
                           next.weightInKg = syncWeightFromBoxes(
                             prev.noOfBoxes,
-                            newCategory.weightPerBox
+                            weightPerBox
                           );
                         } else if (prev.weightInKg !== "") {
                           next.noOfBoxes = syncBoxesFromWeight(
                             prev.weightInKg,
-                            newCategory.weightPerBox
+                            weightPerBox
                           );
                         }
                       }
@@ -374,6 +393,22 @@ export default function YarnInPage() {
                     </p>
                   )}
                 </div>
+              </div>
+
+              {/* Is Full Box */}
+              <div className="col-span-full flex items-end">
+                <label className="flex items-center gap-2 cursor-pointer pb-2">
+                  <input
+                    type="checkbox"
+                    name="isFullBox"
+                    checked={formData.isFullBox}
+                    onChange={handleInputChange}
+                    className="w-4 h-4 rounded border-slate-300 dark:border-[#324d67] text-primary focus:ring-primary"
+                  />
+                  <span className="text-sm font-medium text-slate-700 dark:text-white">
+                    Is Full Box
+                  </span>
+                </label>
               </div>
 
               {/* Number of Boxes */}

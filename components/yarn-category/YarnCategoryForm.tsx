@@ -8,7 +8,6 @@ export interface YarnCategory {
   description?: string;
   noOfCones?: number;
   weightPerBox?: number;
-  isRegular: boolean;
   createdBy: string;
   createdByName?: string;
   createdAt: string;
@@ -20,13 +19,24 @@ interface FormData {
   description: string;
   noOfCones: string;
   weightPerBox: string;
-  isRegular: boolean;
 }
 
 interface FormErrors {
   name: string;
   noOfCones: string;
   weightPerBox: string;
+}
+
+function parseWeightPerBoxValue(weightStr: string): number {
+  const trimmed = weightStr.trim();
+  const parsed = parseFloat(trimmed);
+  const decimalPart = trimmed.includes(".") ? trimmed.split(".")[1] : "";
+
+  if (decimalPart.length === 0 || decimalPart.length < 2) {
+    return parseFloat(parsed.toFixed(2));
+  }
+
+  return parsed;
 }
 
 interface YarnCategoryFormProps {
@@ -37,7 +47,6 @@ interface YarnCategoryFormProps {
     description?: string;
     noOfCones?: number;
     weightPerBox: number;
-    isRegular: boolean;
   }) => Promise<void>;
   onCancel: () => void;
   submitting: boolean;
@@ -55,7 +64,6 @@ export default function YarnCategoryForm({
     description: "",
     noOfCones: "",
     weightPerBox: "36.00",
-    isRegular: false,
   });
   const [formErrors, setFormErrors] = useState<FormErrors>({
     name: "",
@@ -77,7 +85,6 @@ export default function YarnCategoryForm({
           editingCategory.weightPerBox !== undefined
             ? editingCategory.weightPerBox.toFixed(3)
             : "36.00",
-        isRegular: editingCategory.isRegular ?? false,
       });
     } else {
       setFormData({
@@ -85,7 +92,6 @@ export default function YarnCategoryForm({
         description: "",
         noOfCones: "",
         weightPerBox: "36.00",
-        isRegular: false,
       });
     }
     setFormErrors({ name: "", noOfCones: "", weightPerBox: "" });
@@ -95,16 +101,7 @@ export default function YarnCategoryForm({
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
-    const { name, value, type } = e.target;
-
-    if (type === "checkbox") {
-      const checked = (e.target as HTMLInputElement).checked;
-      setFormData((prev) => ({
-        ...prev,
-        [name]: checked,
-      }));
-      return;
-    }
+    const { name, value } = e.target;
 
     if (name === "noOfCones") {
       const numericValue = value.replace(/[^0-9]/g, "");
@@ -161,16 +158,11 @@ export default function YarnCategoryForm({
         errors.weightPerBox =
           "Weight per box must be a valid non-negative number";
       } else {
-        // Check decimal places: allow whole numbers (0 decimal places) or 2-3 decimal places
         const weightStr = formData.weightPerBox;
         const decimalPart = weightStr.includes(".") ? weightStr.split(".")[1] : "";
-        // Allow whole numbers (0 decimal places) or 2-3 decimal places
-        if (
-          decimalPart.length > 0 &&
-          (decimalPart.length < 2 || decimalPart.length > 3)
-        ) {
+        if (decimalPart.length > 3) {
           errors.weightPerBox =
-            "Weight per box must be a whole number or have 2-3 decimal places (e.g., 36, 1.00, or 1.000)";
+            "Weight per box must have at most 3 decimal places";
         }
       }
     }
@@ -187,23 +179,9 @@ export default function YarnCategoryForm({
       return;
     }
 
-    // Format weightPerBox: if whole number, add .00; otherwise keep as is
     let weightPerBoxValue: number;
     if (formData.weightPerBox && formData.weightPerBox.trim() !== "") {
-      const parsed = parseFloat(formData.weightPerBox);
-      // Check if it's a whole number (no decimal point or decimal part is all zeros)
-      const weightStr = formData.weightPerBox.trim();
-      const hasDecimal = weightStr.includes(".");
-      const decimalPart = hasDecimal ? weightStr.split(".")[1] : "";
-
-      // If no decimal point or decimal part is empty/zeros, format to .00
-      if (!hasDecimal || decimalPart === "" || /^0+$/.test(decimalPart)) {
-        // It's a whole number, format to have .00
-        weightPerBoxValue = parseFloat(parsed.toFixed(2));
-      } else {
-        // It has decimal places, use as is (already validated to have 2-3 decimal places)
-        weightPerBoxValue = parsed;
-      }
+      weightPerBoxValue = parseWeightPerBoxValue(formData.weightPerBox);
     } else {
       weightPerBoxValue = 36;
     }
@@ -215,7 +193,6 @@ export default function YarnCategoryForm({
         noOfCones: Number(formData.noOfCones),
       }),
       weightPerBox: weightPerBoxValue,
-      isRegular: formData.isRegular,
     });
   };
 
@@ -310,26 +287,10 @@ export default function YarnCategoryForm({
                 )}
                 {!formErrors.weightPerBox && (
                   <p className="text-xs text-slate-500 dark:text-[#92adc9] mt-1">
-                    Whole numbers or 2-3 decimal places (e.g., 36, 1.00, or 1.000)
+                    Whole numbers or 1 decimal place are padded to 2 (e.g., 36 → 36.00, 1.5 → 1.50)
                   </p>
                 )}
               </div>
-            </div>
-
-            {/* Is Regular */}
-            <div>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  name="isRegular"
-                  checked={formData.isRegular}
-                  onChange={handleInputChange}
-                  className="w-4 h-4 rounded border-slate-300 dark:border-[#324d67] text-primary focus:ring-primary"
-                />
-                <span className="text-sm font-medium text-slate-700 dark:text-white">
-                  Is Regular
-                </span>
-              </label>
             </div>
 
             {/* Form Actions */}

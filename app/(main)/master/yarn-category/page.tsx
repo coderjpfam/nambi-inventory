@@ -46,7 +46,6 @@ export default function YarnCategoryPage() {
     description?: string;
     noOfCones?: number;
     weightPerBox: number;
-    isRegular: boolean;
   }) => {
     try {
       setSubmitting(true);
@@ -144,7 +143,7 @@ export default function YarnCategoryPage() {
           show={!!deleteConfirm}
           onConfirm={() => deleteConfirm && handleDelete(deleteConfirm)}
           onCancel={() => setDeleteConfirm(null)}
-          message="Are you sure you want to delete this yarn category? This action cannot be undone."
+          message="Are you sure you want to delete this yarn category? All yarn in and yarn out entries under this category will also be permanently removed. This action cannot be undone."
         />
 
         {/* Categories List */}

@@ -5,7 +5,6 @@ export interface IYarnCategory extends Document {
   description?: string;
   noOfCones?: number;
   weightPerBox?: number;
-  isRegular: boolean;
   createdBy: string; // User email or ID
   createdAt: Date;
   updatedAt: Date;
@@ -31,10 +30,6 @@ const YarnCategorySchema: Schema = new Schema(
       type: Number,
       min: 0,
       default: 36,
-    },
-    isRegular: {
-      type: Boolean,
-      default: false,
     },
     createdBy: {
       type: String,
